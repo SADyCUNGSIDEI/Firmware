@@ -1,13 +1,16 @@
 #include "Arduino.h"
+#include "SADyC32.h"
 
 class Salida {
   private:
-    int _pin;
-    boolean _dtyCicle;
-    boolean _steps;
+    static int vect_canales1[8];
+    byte _leerCanalesDigitales(void);
 
   public:
-    void SetPwm(byte pin, int dtyCicle);
-    void SetDac(byte pin, int steps);
-    void SetSalDig(byte pin, bool estado);
+    Salida();
+    void setPwm(byte pin, int dtyCicle);
+    void setDac(byte pin, int steps);
+    void setSalDig(byte pin, bool estado);
+    void transTemp(SADyC32 &s);
+    void adcSrv(SADyC32 &s);
 };
