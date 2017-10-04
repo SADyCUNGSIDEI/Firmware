@@ -21,7 +21,7 @@ bool espServer() {
     return false;
 }
 
-bool ini_Wifi(void) {
+bool iniWifi(void) {
   if (espCheck()) {
     if (espConnect(WIFI_AP, WIFI_CLAVE)) {
       if (espServer()) {        

@@ -1,7 +1,6 @@
 SimpleTimer timer;            //Asignación del timer (timer) utilizado para las transmiciones sincrónicas
 SimpleTimer timer1;           //Asignación del timer (timer1) utilizado para las transmiciones sincrónicas
 
-
 #define WP1 30                //Salida que maneja el WRITE PROTECT protect de la memoria EEprom-I2C: 24AA1025
 #define MEM_FIN 524200        //Fin de la EEProm (se reservan los 88 bytes del final)
 
@@ -20,7 +19,7 @@ SimpleTimer timer1;           //Asignación del timer (timer1) utilizado para la
 
 #define ESCAPE 0x1b           //Escape --> 0x1B - Definido "99" solo para pruebas en consola que no admiten "0x1B"
 #define IN_END 0x0d           //Fin de mensajes
-#define TIME_OUT 25000       //Time-out de recepción
+#define TIME_OUT 250000       //Time-out de recepción
 #define VECT_END 30           //Tamaño vector para valores de los canales 
 #define LARGO_ARCH 15         //Máximo largo de archivo
 
@@ -34,8 +33,13 @@ SimpleTimer timer1;           //Asignación del timer (timer1) utilizado para la
 #define vers     "VERSION:    1.7.7"
 #define fecha    "DE FECHA:   30-08-2017"
 
-#define RTC_ADDR 0x68          //Dirección del RTC-I2C:  DS1307
-#define RTC_M_ST 0x08          //Dirección de comienzo ram del RTC
+#define RTC_ADDR      0x68          //Dirección del RTC-I2C:  DS1307
+#define RTC_M_ST      0x08          //Dirección de comienzo ram del RTC
+#define RTC_M_CCA1    0x0D          //Dirección: Cantidad de canales analógicos
+#define RTC_M_CCA2    0x0E          //Dirección: Cantidad de canales analógicos de tipo inAmp
+#define RTC_M_C_INI   0x0F          //Dirección: Código de inicio
+#define RTC_M_MODO    0x13          //Dirección: Modo de trabajo del equipo
+#define RTC_M_RF      0x10          //Dirección: Flag de registro
 
 #define TST 13                //TST para indicar encendido de la placa SADyC32 (Pin 45)- En "13" solo para pruebas de placa Arduino sola
 
@@ -75,7 +79,7 @@ bool mem_full;                  //Indicador de memoria EEProm llena
 volatile bool Wifi_ini;         //Indicador que la placa WiFi eta inicializada (True --> inicializada)
 //------
 volatile byte modo;
-volatile byte reg_flag;
+//volatile byte regFlag;
 byte auxbuffer[VECT_END];
 byte k_g = 0;
 volatile byte pin1, pin2;

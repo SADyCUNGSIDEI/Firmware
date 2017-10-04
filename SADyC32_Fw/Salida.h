@@ -1,5 +1,3 @@
-
-
 //Permite setear un PWM en el pin seleccionado ((pinPwm) de 10 a 13) con el Duty-Cicle (dtyCicle)
 void setPwm(byte pin, int dtyCicle) {
   if(pin > 9 && pin < 14) {               //No se usa el pin13 (led) ni los pines 0 y 1 (Rx0 y Tx0).
@@ -15,14 +13,14 @@ void setDac(byte pin, int valor) {
 }
 
 //Permite setear un pin de salida digital ((pinDig) de 2 a 9) con el ((estado) 0 o 1)
-void setSalDig(byte pinDig, bool estado){
+void setSalDig(byte pinDig, bool estado) {
   if (pinDig > 1 && pinDig < 10) {               //No se usa el pin13 (led) ni los pines 0 y 1 (Rx0 y Tx0).
     digitalWrite(pinDig, estado);
   }
 }
 
 //Rutina que lee los canales digitales de entrada y los unifica en un solo byte "digi_in"
-byte leerCanalesDigitales(){
+byte leerCanalesDigitales() {
   byte digi_in;
   
   digi_in = 0x00 | byte(digitalRead(DIN0))
@@ -43,8 +41,6 @@ void transmTemp() {
   byte i, aux;
   int vectAux1[8];
   int vectAux2[4];
-
-  //modo = s.getModo();
 
   //Copia el vector de datos de los canales analógicos en un vector auxiliar para su manipulación
   memcpy(vectAux1, vectCanales1, sizeof vectCanales1);

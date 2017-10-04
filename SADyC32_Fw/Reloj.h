@@ -25,7 +25,7 @@ boolean setFechaHora(byte horas, byte minutos, byte segundos, byte dia, byte mes
 String getFechaHora() {
   byte segundo, minuto, hora, wday, dia, mes, anio;
   String fechaHora;
-  // Iniciar el intercambio de información con el DS1307 (0xD0)
+  // Iniciar el intercambio de información con el DS1307
   Wire.beginTransmission(RTC_ADDR);
 
   Wire.write(0x00);
@@ -48,17 +48,37 @@ String getFechaHora() {
           String(dia) + "/" + String(mes) + "/20" + String(anio);
 }
 
+void getFechaHoraReg() {
+  byte segundo, minuto, hora, wday, dia, mes, anio;
+  String fechaHora;
+  // Iniciar el intercambio de información con el DS1307
+  Wire.beginTransmission(RTC_ADDR);
+
+  Wire.write(0x00);
+
+  // Si el DS1307 esta presente, comenzar la lectura de 8 bytes
+  Wire.requestFrom(RTC_ADDR, 8);
+
+  auxbuffer[1] = bcd2bin(Wire.read()); // Segundos
+  auxbuffer[2] = bcd2bin(Wire.read()); // Minutos
+  auxbuffer[3] = bcd2bin(Wire.read()); // Horas
+  bcd2bin(Wire.read()); // Día de la semana. Se descarta
+  auxbuffer[4] = bcd2bin(Wire.read()); // Día
+  auxbuffer[5] = bcd2bin(Wire.read()); // Mes
+  auxbuffer[6] = bcd2bin(Wire.read()); // Año
+}
+
 //Escribe un dato en el RTC 
 //rtc_addr --> dirección interna de los registros y memoria del RTC
 //data --> dato a guardar
-void memWrite(byte addr, byte data) {
+void rtcWrite(byte addr, byte data) {
   Wire.beginTransmission(RTC_ADDR);
   Wire.write(addr);                
   Wire.write(data);                
   Wire.endTransmission(true);    
 }  
 
-byte memRead(byte addr) {
+byte rtcRead(byte addr) {
   byte c; 
 
   Wire.beginTransmission(RTC_ADDR);
@@ -67,34 +87,4 @@ byte memRead(byte addr) {
   Wire.requestFrom((int)RTC_ADDR, 1, true);
   c = Wire.read();
   return c;
-}  
-
-byte getMemModo() {
-  byte modo = memRead(RTC_M_ST + 11);
-  if (modo < 1 || modo > 5) { modo = 1; }
-  return modo;
-}
-
-void setMemModo(byte modo) {
-  memWrite((RTC_M_ST + 11), modo);
-}
-
-byte getMemCanAnalog1() {
-  byte can_analog = memRead(RTC_M_ST + 5);
-  if (can_analog < 1 || can_analog > 8) { can_analog = 8; }
-  return can_analog;
-}
-
-void setMemCanAnalog1(byte cant) {
-  memWrite((RTC_M_ST + 5), cant);
-}
-
-byte getMemCanAnalog2() {
-  byte can_analog = memRead(RTC_M_ST + 6);
-  if (can_analog < 1 || can_analog > 4) { can_analog = 4; }
-  return can_analog;
-}
-
-void setMemCanAnalog2(byte cant) {
-  memWrite((RTC_M_ST + 6), cant);
 }
