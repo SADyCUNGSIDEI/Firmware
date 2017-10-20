@@ -24,7 +24,7 @@ boolean setFechaHora(byte horas, byte minutos, byte segundos, byte dia, byte mes
 //Transmite por RS232 dìa y hora actual
 String getFechaHora() {
   byte segundo, minuto, hora, wday, dia, mes, anio;
-  String fechaHora;
+
   // Iniciar el intercambio de información con el DS1307
   Wire.beginTransmission(RTC_ADDR);
 
@@ -48,26 +48,45 @@ String getFechaHora() {
           String(dia) + "/" + String(mes) + "/20" + String(anio);
 }
 
-void getFechaHoraReg() {
+//Transmite por RS232 dìa y hora actual
+boolean getFechaHoraReg() {
   byte segundo, minuto, hora, wday, dia, mes, anio;
-  String fechaHora;
+
   // Iniciar el intercambio de información con el DS1307
   Wire.beginTransmission(RTC_ADDR);
 
   Wire.write(0x00);
 
+  if (Wire.endTransmission() != 0)
+    return true;
+
+
   // Si el DS1307 esta presente, comenzar la lectura de 8 bytes
   Wire.requestFrom(RTC_ADDR, 8);
 
-  auxbuffer[1] = bcd2bin(Wire.read()); // Segundos
-  auxbuffer[2] = bcd2bin(Wire.read()); // Minutos
-  auxbuffer[3] = bcd2bin(Wire.read()); // Horas
-  bcd2bin(Wire.read()); // Día de la semana. Se descarta
-  auxbuffer[4] = bcd2bin(Wire.read()); // Día
-  auxbuffer[5] = bcd2bin(Wire.read()); // Mes
-  auxbuffer[6] = bcd2bin(Wire.read()); // Año
-}
+  segundo = bcd2bin(Wire.read());
+  minuto = bcd2bin(Wire.read());
+  hora = bcd2bin(Wire.read());
+  wday = bcd2bin(Wire.read());
+  dia = bcd2bin(Wire.read());
+  mes = bcd2bin(Wire.read());
+  anio = bcd2bin(Wire.read());
 
+  auxbuffer[1] = hora / 10;
+  auxbuffer[2] = hora - int(hora/10)*10;
+  auxbuffer[3] = minuto / 10;
+  auxbuffer[4] = minuto - int(minuto/10)*10;
+  auxbuffer[5] = segundo / 10;
+  auxbuffer[6] = segundo - int(segundo/10)*10;
+  auxbuffer[7] = dia / 10;
+  auxbuffer[8] = dia - int(dia/10)*10;
+  auxbuffer[9] = mes / 10;
+  auxbuffer[10] = mes - int(mes/10)*10;
+  auxbuffer[11] = 2;
+  auxbuffer[12] = 0;
+  auxbuffer[13] = anio / 10;
+  auxbuffer[14] = anio - int(anio/10)*10;
+}
 //Escribe un dato en el RTC 
 //rtc_addr --> dirección interna de los registros y memoria del RTC
 //data --> dato a guardar

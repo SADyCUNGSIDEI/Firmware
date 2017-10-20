@@ -72,7 +72,27 @@
 *23/08/2017 - Ver: 1.7.6
  *Se emprolija Comentarios de comando "T"
  *
-*30/08/2017 - Ver: 1.7.7
+*25/08/2017 - Ver: 1.7.7
+ *Se agregan comentarios faltantes
+ *
+*27/08/2017 - Ver: 1.7.8
+ *Se agrega una variable para distinguir el puerto de la comunicación
+ *Serial_0(Monitor-Arduino) y Serial_1(RS232) se mantienen en formato de entrada salida idénticos
+ *Serial_2 (RS485) se mantendría igual que los anteriores, hasta que se implemente el protocolo MODBUS
+ *Serial_3 (WiFi) en formato html para browser
+ *Se corrigió el seteo de los canales analógicos a dos cifras ascii (02 al 09)
+ *
+*30/08/2017 - Ver: 1.7.9
+ *Se reforma la rutina de arranque para cada port serial
+ *
+*31/08/2017 - Ver: 1.8.0
+ *Se emprolijan comentarios de WiFi y se saca la red y pass utilizada de pruebas
+ *
+*03/09/2017 - Ver: 1.8.1 
+ *Se agrega el ingreso de la red y pass para WiFi con el comando ESC W, y se guarda en la Ram del reloj
+ *Se lee del reloj estos datos para inicializar la comunicación WiFi
+ *
+*30/08/2017 - Ver: 1.9.0
  *Se empezó la modularización del código en archivos. Se mejoró la máquina de estados para prescindir 
  *de algunas funciones, Se mejoró la rutina de conexión a WiFi. Se implementó una transmisión
  *temporizada de los canales analógicos por WiFi (En prueba)
@@ -100,14 +120,13 @@
 
 void setup() {
   Serial.begin(115200);                 //Para comunicación serial (TX0, RX0) vía conector USB
-
   Serial1.begin(115200);                 //Para comunicación serial (TX1, RX1) vía conector RS232
+  Serial2.begin(115200);                //Para comunicación por RS485 (TX2, RX2)
+  Serial3.begin(115200);                //Para comunicación por WiFi (TX3, RX3) (ESP8266)
     
   pinMode(RS485_DIR, OUTPUT);     
   digitalWrite(RS485_DIR, RS485_Rx);    //Prepara para recepción por RS485
-  Serial2.begin(4800);                  //Para comunicación por RS485 (TX2, RX2)
-  
-  Serial3.begin(115200);                //Para comunicación por WiFi (TX3, RX3) (ESP8266)
+
 
   Wire.begin();
   
@@ -147,28 +166,16 @@ void setup() {
   pinMode(WP_SD, INPUT);
   pinMode(CD, INPUT);
  
-  if (!SD.begin(CS2)) {
-    Serial.println(F("Tarjeta SD no presente, sin formato  o fallada"));
-//    return;
-  } else {
-    Serial.println(F("card initialized."));
-  }
-
-  if (!SerialFlash.begin(CS1)) { 
-    Serial.println(F("No se puede acceder a la memoria Flash por SPI")); 
-  } else {
-    Serial.println(F("Flash encontrada e inicializada."));
-  }
   
   analogReference(AR_DEFAULT);                            //VER COMO SE SETEA LA REFERENCIA EXTERNA !!!!!!!
-  REG_ADC_MR = (REG_ADC_MR & 0xFFF0FFFF) | 0x00020000;    //Para convertir en 3,97uS aprox. en vez de 40uS.
+  REG_ADC_MR = (REG_ADC_MR & 0xFFF0FFFF) | 0x00020000;    //Para convertir en 6uS aprox. en vez de 40uS.
   analogReadResolution(MAX_RESOL);
   analogWriteResolution(MAX_RESOL);
 
-  Scheduler.startLoop(Adc_Srv);
+  Scheduler.startLoop(adcSrv);                           //Comienzo del scheduler para el conversor
 
   iniVar();
-  saludo();
+  saludo();                                               //Placa inicializada y lista para trabajar
 }
 //--------------------------------------------------------------------------------------------------
 /*void callFunction(int index, uint32_t c, uint8_t wait) {
@@ -188,6 +195,9 @@ void loop() {
     vaciarAuxBuffer();
   }
 
+  // Función que espera mientras se carga el buffer con la respuesta http
+  checkEnvioWiFi();
+
   checkMedicion();
 
   yield();
@@ -199,17 +209,27 @@ void loop() {
 //---------------------------     RUTINAS     ------------------------------------------------------
 //--------------------------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------
-//Máquina de estados que recibe datos por RS232 (Terminal arduino)
+//Evento serial por el que se reciben datos por RS232 de la plca Arduino (Terminal)
 //Valida la recepción de un comando
-
 void serialEvent() {
-  serialManager(Serial);
+  serialActivo = SERIAL_0;
+  serialInput(Serial);
+}
+// RS232
+void serialEvent1() {
+  serialActivo = SERIAL_1;
+  serialInput(Serial1);
+}
+// RS485
+void serialEvent2() {
+  serialActivo = SERIAL_2;
+  serialInput(Serial2);
 }
 
 //--------------------------------------------------------------------------------------------------
-//Rutina que lee el ADC en secuencia
-//Cada vez que ejecuta lee el siguiente canal hasta el último seteado
-void Adc_Srv() {
-  adcSrv();
-  yield();
+//Evento serial por el que se reciben datos por WiFi (Placa ESP8266)
+void serialEvent3() {
+  serialActivo = SERIAL_3;
+  serialInput(Serial3);
 }
+

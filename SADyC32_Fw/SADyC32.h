@@ -1,9 +1,9 @@
 //Impresión de los datos básicos del equipo
 void datosEquipo(void){
-  Serial.println(F(proyecto));
-  Serial.println(F(equipo));
-  Serial.println(F(vers));
-  Serial.println(F(fecha));
+  serialOutput(F(proyecto), true);
+  serialOutput(F(equipo), true);
+  serialOutput(F(vers), true);
+  serialOutput(F(fecha), true);
 }
 
 // Setea el puntero de memoria de la EEPROM (I2C)
@@ -32,7 +32,9 @@ void setModo(byte mode) {
 }
 
 byte getModo() {
-  return rtcRead(RTC_M_MODO);
+  modo = rtcRead(RTC_M_MODO);
+  if (modo > 5) { modo = 1; }
+  return modo;
 }
 
 // Setea la cantidad de canales analógicos y los guarda en la RAM del RTC
@@ -43,7 +45,9 @@ void setCanAnalog1(byte cant) {
 }
 
 byte getCanAnalog1() {
-  return rtcRead(RTC_M_CCA1);
+  cantCanAnalog1 = rtcRead(RTC_M_CCA1);
+  if (cantCanAnalog1 > 8) { cantCanAnalog1 = 1; }
+  return cantCanAnalog1;
 }
 
 // Setea la cantidad de canales analógicos de tipo inAmp y los guarda en la RAM del RTC
@@ -54,7 +58,9 @@ void setCanAnalog2(byte cant) {
 }
 
 byte getCanAnalog2() {
-  return rtcRead(RTC_M_CCA2);
+  cantCanAnalog2 = rtcRead(RTC_M_CCA2);
+  if (cantCanAnalog2 > 4) { cantCanAnalog2 = 1; }
+  return cantCanAnalog2;
 }
 
 void setCodigoInicio(byte codigo) {
@@ -71,6 +77,13 @@ void setRegFlag(byte regFlag) {
 
 byte getRegFlag() {
   return rtcRead(RTC_M_RF);
+}
+
+void getWifiParams() {
+  for (int i=0; i<=15; i++) {
+    nombreAP[i] = rtcRead(RTC_M_AP + i);
+    claveAP[i] = rtcRead(RTC_M_PW + i);
+  }
 }
 
 //Setea en la RAM del RTC el tiempo de registro
@@ -115,6 +128,9 @@ void setInAmp(byte in_inAmp, byte amplif){
   }
 }
 
+//--------------------------------------------------------------------------------------------------
+//Rutina que lee el ADC en secuencia
+//Cada vez que ejecuta lee el siguiente canal hasta el último seteado
 void adcSrv() {
   byte i;
   
@@ -128,14 +144,17 @@ void adcSrv() {
       vectCanales2[i] = analogRead(62 + i);
     }
   }
+  yield();
 }
 
 //Para todos los modos de trabajo, timers y desacopla interrupciones
 void parada(void) {
-  timer.disable(id_Transm_Temp);
-  timer.deleteTimer(id_Transm_Temp);
-  timer.disable(id_Registro_Temp);
-  timer.deleteTimer(id_Registro_Temp);
+  timer.disable(idTransmTemp);
+  timer.deleteTimer(idTransmTemp);
+  timer.disable(idRegistroTemp);
+  timer.deleteTimer(idRegistroTemp);
+  timer.disable(idTransmTempWifi);
+  timer.deleteTimer(idTransmTempWifi);
   detachInterrupt(digitalPinToInterrupt(pin1)); 
   detachInterrupt(digitalPinToInterrupt(pin2));
   setRegFlag(0);
@@ -170,24 +189,20 @@ void grabaIniE2(void) {
   int i;
   char buf[6];
 
-  sprintf(buf,"%04d",tiempo_reg);
+  sprintf(buf,"%04d",getTiempoReg());
   getFechaHoraReg();
   grabaDatoE2(0xff);
   grabaDatoE2(0xff);
-  for (i=1;i<=10;i++) {
-    grabaDatoE2(auxbuffer[i]);
+  for (i=1;i<=14;i++) {
+    grabaDatoE2(char(auxbuffer[i]));
   }
-  grabaDatoE2(0x32);
-  grabaDatoE2(0x30);
-  grabaDatoE2(auxbuffer[11]);
-  grabaDatoE2(auxbuffer[12]);
   for (i=0;i<=3;i++) {
     grabaDatoE2(buf[i]);
   }
-  grabaDatoE2(modo);
+  grabaDatoE2(char(modo));
   grabaDatoE2(cantCanAnalog1);
-  grabaDatoE2(cantCanAnalog2);
-  grabaDatoE2(0x08);
+  grabaDatoE2(char(cantCanAnalog2));
+  grabaDatoE2(0x38);
   grabaDatoE2(getCodigoInicio());
   grabaDatoE2(0xff);
   grabaDatoE2(0xff);
@@ -197,6 +212,7 @@ void grabaIniE2(void) {
 //Rutina de registro temporizado en EEProm (I2C) de los canales y el modo seteados
 //Pumem apunta a la primera posición libre de la memoria
 void RegistroTempE2(void) {
+  int i;
   int vectAux1[8];
   int vectAux2[4];
 
@@ -235,14 +251,24 @@ void descargaE2(void) {
   }
 }
 
-void transmisionTemporizada(int tiempo) {
+void transmisionTemporizada(int tiempo, boolean wifi) {
   if (tiempo <= 10000 && modo != 0) {
     if (tiempo == 0) {
-      transmTemp();
+      if (wifi) {
+        transmTempWifi();
+      }
+      else {
+        transmTemp();
+      }
     }
     else {
-      if(modo == 1 || modo == 3) {
-        id_Transm_Temp = timer.setInterval(tiempo, transmTemp);
+      if (modo == 1 || modo == 3) {
+        if (wifi) {
+          idTransmTempWifi = timer.setInterval(tiempo, transmTempWifi);
+        }
+        else {
+          idTransmTemp = timer.setInterval(tiempo, transmTemp);  
+        }
       }
     }
   }
@@ -252,13 +278,33 @@ void registroTemporizado(int tiempoReg) {
   if(modo == 2 || modo == 4) {
     if (tiempoReg >= 1 && tiempoReg <= 3600) {
       parada();
-      setCodigoInicio(0x01);                          //Guarda en reloj código de inicio
+      setCodigoInicio(0x01);                         //Guarda en reloj código de inicio
       setTiempoReg(tiempoReg);                       //Guarda en reloj tiempo de registro
-      setRegFlag(1);                                                //Guarda en reloj flag de registro
-      grabaIniE2();                                                 //Almacena en EEProm encabezado de inicio de registro
-      id_Registro_Temp = timer.setInterval(tiempoReg * 1000, RegistroTempE2);
-    }          
+      setRegFlag(1);                                 //Guarda en reloj flag de registro
+      grabaIniE2();                                  //Almacena en EEProm encabezado de inicio de registro
+      idRegistroTemp = timer.setInterval(tiempoReg * 1000, RegistroTempE2);
+    }
   }
+}
+
+//--------------------------------------------------------------------------------------------------
+//Graba el nombre de Red y su Password en la ram del reloj
+void configWiFiParams(void) {
+  int i=0,j=0;
+  
+  while (inString[i] != 0xff) {
+    rtcWrite(RTC_M_AP+i,inString[i]);
+    i++;
+  }
+  rtcWrite(RTC_M_AP+i,NULL);
+  
+  i++;
+  while (inString[i] != 0xff) {
+    rtcWrite(RTC_M_PW+j,inString[i]);
+    i++;
+    j++;
+  }
+  rtcWrite(RTC_M_PW+j,NULL);
 }
 
 void saludo() {
@@ -269,18 +315,18 @@ void saludo() {
     delay(250);
   }
   datosEquipo();
-  Serial.print("Modo: ");
-  Serial.println(getModo());
-  Serial.print("Cantidad canales analogicos: ");
-  Serial.println(getCanAnalog1());
-  Serial.print("Cantidad canales analogicos inAmp: ");
-  Serial.println(getCanAnalog2());
-  Serial.print("Pumem: ");
-  Serial.println(pumem);
-  Serial.print("Código de inicio: ");
-  Serial.println(getCodigoInicio());
-  Serial.print("RegFlag: ");
-  Serial.println(getRegFlag());
+  serialOutput("Modo: ", false);
+  serialOutput(String(modo), true);
+  serialOutput("Cantidad canales analogicos: ", false);
+  serialOutput(String(cantCanAnalog1), true);
+  serialOutput("Cantidad canales analogicos inAmp: ", false);
+  serialOutput(String(cantCanAnalog2), true);
+  serialOutput("Pumem: ", false);
+  serialOutput(String(pumem), true);
+  serialOutput("Código de inicio: ", false);
+  serialOutput(String(getCodigoInicio()), true);
+  serialOutput("RegFlag: ", false);
+  serialOutput(String(getRegFlag()), true);
 }
 
 //Maquina de estados que interpreta la secuencia de un comando por RS232
@@ -301,7 +347,7 @@ void parsing(void) {
       eeTest(data);
     break;
     case '2':                               //Test de la comunicación RS232 - ( ESC 2 Char CR ) - Char => cialquier caracter ASCII
-      Serial.print(inString);      
+      Serial.println(inString);      
     break;
     case 'A':                               //Recibe cantidad de canales analógicos - ( ESC A Cantidad CR) - Cantidad => 1 a 8
       aux = inString.toInt();
@@ -351,7 +397,7 @@ void parsing(void) {
     
       setFechaHora(hora, minuto, segundo, dia, mes, anio);
     break;
-    case 'M':                               //Generación de PWM - ( ESC M Pin Duty CR) - Pin => 02 al 13 - Duty => 0000 a 4095
+    case 'M':                               //Generación de PWM - ( ESC M Pin Duty CR) - Pin => 10 al 13 - Duty => 0000 a 4095
       int pinPwm;
       int dtyCicle;
 
@@ -370,8 +416,8 @@ void parsing(void) {
       setDac(pinDac, valor);
     break;
     case 'O':                               //Transmite datos de un archivo en memoria SD - ( ESC O Archivo CR ) - Archivo en formato --> 15.3 máximo
-        archivo = inString;
-        leerArchSD(archivo);
+      archivo = inString;
+      leerArchSD(archivo);
     break;
     case 'P':                               //Parada de los modos del equipo - ( ESC P CR )
       parada();
@@ -384,19 +430,21 @@ void parsing(void) {
       tiempo = inString.toInt();
       registroTemporizado(tiempo);
     break;
-    case 'S':                               //Seteo de la salida digital - (ESC S Salida Estado CR) - Salida => 2 a 9 - Estado 0 o 1
+    case 'S':                               //Seteo de la salida digital - (ESC S Salida Estado CR) - Salida => 02 a 09 - Estado 0 o 1
       byte pinDig;
       bool estado;
 
-      pinDig = parseValor(1,1);
-      estado = parseValor(2,1);
+      pinDig = parseValor(1,2);
+      estado = parseValor(3,2);
 
       setSalDig(pinDig, estado);
     break;
     case 'T':                               //Transmisión temporizada de los canales digitales y analógicos seteados - ( ESC T Tiempo CR ) - Tiempo => 1 a 10000 milisegundos || Tiempo=0 -> una transmisión
       tiempo = inString.toInt();            //(En los datos analógicos se transmite primero el byte alto y luego el bajo)
-      transmisionTemporizada(tiempo);
+      transmisionTemporizada(tiempo, false);
     break;
+    case 'W':                               //Seteo de Red y Password para WiFi - (ESC W Red 0xFF Pass 0xFF CR) - Red y Pass máximo 15 caracteres ASCII
+      configWiFiParams();
     case 'd':                               //Descarga de datos desde la EEProm - ( ESC d CR )
       parada();
       descargaE2();
@@ -405,15 +453,17 @@ void parsing(void) {
     break;
     case 'e':                               //Transmite datos del equipo - ( ESC e CR ) - Responde con los datos básicos del proyecto
       datosEquipo();
+      espGetIP();
     break;
     case 'h':                               //Transmite día y hora del RTC - ( ESC h CR ) - Responde con día y hora del equipo
-      Serial.println(getFechaHora());
+      serialOutput(getFechaHora(), true);
     break;
     case 'g':
       saludo();
     break;
     case 'k':
-      id_Transm_Temp = timer.setInterval(50, transmTemp2);
+      tiempo = inString.toInt();
+      transmisionTemporizada(tiempo, true);
     break;
   }
 }
@@ -461,27 +511,116 @@ void iniVar(void) {
   modo = getModo();
   cantCanAnalog1 = getCanAnalog1();
   cantCanAnalog2 = getCanAnalog2();
-  
+  getWifiParams();
+
+  SerialActivo serialActivo = NO_SERIAL;
 
   inString = "";
-  Wifi_ini = false;
 
   archivo.reserve(LARGO_ARCH);
 
   if (getRegFlag() == 1) {
     grabaIniE2();                                             //Almacena en EEProm encabezado por vuelta de alimentación
-    id_Registro_Temp = timer.setInterval(getTiempoReg() * 1000, RegistroTempE2);
+    idRegistroTemp = timer.setInterval(getTiempoReg() * 1000, RegistroTempE2);
   }
+  // Inicialización de la tarjeta SD
+  if (!SD.begin(CS2)) {
+    Serial.println(F("Tarjeta SD no presente, sin formato  o fallada"));
+//    return;
+  } else {
+    Serial.println(F("card initialized."));
+  }
+
+  // Inicialización de la memoria flash (SPI)
+  if (!SerialFlash.begin(CS1)) { 
+    Serial.println(F("No se puede acceder a la memoria Flash por SPI")); 
+  } else {
+    Serial.println(F("Flash encontrada e inicializada."));
+  }
+
+  // Inicialización del Wi-Fi
   if (iniWifi()) {
     Serial.println("WiFi ESP8266 inicializada");
-    Wifi_ini = true;
   }else{
     Serial.println("Wifi ESP8266 no encontrada");
   }
 }
 
-void serialManager(HardwareSerial &port) {
+
+
+//--------------------------------------------------------------------------------------------------
+//Formateo de una página en html para enviarla por la placa ESP8266 a un browser remoto
+void envioPagina(String titulo, String cuerpo, int tiempo) {
+  http("<!DOCTYPE HTML>");
+  http("<html>");
+  http("<head><title>");
+  http(titulo);
+  http("</title>");
+  http("<style>");
+  http("iframe {");
+  http("width:100%;");
+  http("height:500px;");
+  http("}");
+  http("fieldset {");
+  http("margin:0;");
+  http("padding:0;");
+  http("width:100%;");
+  http("height:100%;");
+  http("}");
+  http("</style>");
+  http("<script>");
+  http("function reloadIFrame(com) {");
+  http("document.getElementById('contenido').src = \"http://192.168.0.104/?com=\" + com");
+  http("}");
+  http("</script>");
+  http("<body>");
+  http("<table width=\"100%\">");
+  http("<tr>");
+  http("<td width=\"10%\">Comando:</td>");
+  http("<td width=\"70%\"><input type=\"text\" style=\"width:98%\" id=\"comando\"></td>");
+  http("<td width=\"20%\"><button onclick=\"reloadIFrame(document.getElementById('comando').value)\">Enviar</button></td>");
+  http("</tr>");
+  http("<tr>");
+  http("<td width=\"100%\" colspan=\"3\">");
+  http("<fieldset>");
+  http("<iframe src=\"www.google.com\" id=\"contenido\" frameborder=\"0\"></iframe>");
+  http("</fieldset>");
+  http("</td>");
+  http("</tr>");
+  http("</table>");
+  http("</body></html>");
+  delay(1);
+  Serial3.println("AT+CIPCLOSE=0");
+}
+
+void serialInput(HardwareSerial &port) {
   if (port.available()) {
-    InComando(port.read());
+    if (serialActivo == SERIAL_0) {
+      InComando(port.read());  
+    }
+    if (serialActivo == SERIAL_1) {
+      //Serial.print(port.read());
+    }
+    if (serialActivo == SERIAL_2) {
+      InComando(port.read());
+    }
+    if (serialActivo == SERIAL_3) {
+      // Si se detecta el carácter "+" es una petición http
+      if (port.read() == '+') {
+          if (port.find("?com=")) {
+            char comando;
+            delay(30);
+            InComando(ESCAPE);
+            while (comando != ' ') {
+              comando = port.read();
+              InComando(comando);
+            }
+            InComando(IN_END);
+          }
+          else {
+            envioPagina("SADyC32", "Cuerpo", 5);
+          }
+      }
+    }
   }
 }

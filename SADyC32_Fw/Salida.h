@@ -5,14 +5,14 @@ void setPwm(byte pin, int dtyCicle) {
   }
 }
 
-//Setea el DAC seleccionado (pinDac) con un valor específico (Valor)
+//Setea el DAC seleccionado ((pinDac) de 00 a 01) con un valor específico (Valor)
 void setDac(byte pin, int valor) {
   if(pin > 65 && pin < 68){
     analogWrite(pin, valor);
   }
 }
 
-//Permite setear un pin de salida digital ((pinDig) de 2 a 9) con el ((estado) 0 o 1)
+//Permite setear un pin de salida digital ((pinDig) de 02 a 09) con el ((estado) 0 o 1)
 void setSalDig(byte pinDig, bool estado) {
   if (pinDig > 1 && pinDig < 10) {               //No se usa el pin13 (led) ni los pines 0 y 1 (Rx0 y Tx0).
     digitalWrite(pinDig, estado);

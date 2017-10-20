@@ -26,3 +26,37 @@ int parseValor(int inicio, int cantidad) {
   }
   return val;
 }
+
+void http(String output) {
+  Serial3.print("AT+CIPSEND=0,");               // AT+CIPSEND=0, num
+  Serial3.println(output.length());
+  if (Serial3.find(">")){                        // Si recibimos la peticion del mensaje
+    Serial3.println(output);                    //Aqui va el string hacia el WIFI 
+    delay(10);
+    while (Serial3.available() > 0 ){ 
+      if(Serial3.find("SEND OK")) break;        // Busca el OK en la respuesta del wifi
+    }
+  }
+}
+
+void serialOutput(String data, bool newLine) {
+  switch (serialActivo) {
+    case SERIAL_0:
+      Serial.print(data);
+      if (newLine == true) { Serial.println(""); }
+    break;
+    case SERIAL_2:
+    Serial.println("Transmision RS485");
+      digitalWrite(RS485_DIR, RS485_Tx);
+      Serial2.print(data);
+      if (newLine == true) { Serial2.println(""); }
+      digitalWrite(RS485_DIR, RS485_Rx);
+    break;
+    case SERIAL_3:
+      wifiSendTimeout = 1000;
+      http(data);
+      if (newLine == true) { http("\r\n"); }
+      delay(10);
+    break;
+  }
+}

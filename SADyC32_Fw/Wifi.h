@@ -10,8 +10,23 @@ bool espCheck() {
   return espSend("AT", 500);
 }
 
+bool disableEcho() {
+  return espSend("ATE0", 500);
+}
+
+bool disconnectWifi() {
+  return espSend("AT+CWQAP", 500);
+}
+
 bool espConnect(String red, String clave) {
   return espSend("AT+CWJAP_CUR=\""+red+"\",\""+clave+"\"", 7500);
+}
+
+bool espGetIP() {
+/*  Serial3.println("AT+CIPSTA?");
+  while (Serial3.available()) {
+    Serial.print(Serial3.read());
+  }*/
 }
 
 bool espServer() {
@@ -22,9 +37,12 @@ bool espServer() {
 }
 
 bool iniWifi(void) {
+  disableEcho();
+  disconnectWifi();
   if (espCheck()) {
-    if (espConnect(WIFI_AP, WIFI_CLAVE)) {
-      if (espServer()) {        
+    if (espConnect(nombreAP, claveAP)) {
+      if (espServer()) {
+        espGetIP();
         return true;
       }
       else {
@@ -38,18 +56,25 @@ bool iniWifi(void) {
     }
   }
   else {
-    Serial.println("No se encontro el módulo ESP8266");
+    Serial.println("No se encontro el modulo ESP8266");
     return false;
   }
 }
 
-void transmTemp2() {
+void checkEnvioWiFi() {
+  if (wifiSendTimeout > 0) {
+    if (wifiSendTimeout == 1) { 
+      espSend("AT+CIPCLOSE=0", 500);
+      wifiBuffer = "";
+    }
+    wifiSendTimeout--;
+  }
+}
+
+void transmTempWifi() {
   byte i, aux;
   int vectAux1[8];
   int vectAux2[4];
-  //byte buff[8];
-  String buff = "";
-  String aux2 = "";
 
   //Copia el vector de datos de los canales analógicos en un vector auxiliar para su manipulación
   memcpy(vectAux1, vectCanales1, sizeof vectCanales1);

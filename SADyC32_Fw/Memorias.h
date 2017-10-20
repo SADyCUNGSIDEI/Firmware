@@ -13,16 +13,16 @@ void eeWrite(unsigned long e2_addr, byte data) {
   
   memaddl = (byte) (e2_addr & 0xff);
   memaddh = (byte) ((e2_addr >> 8) & 0xff);
-  i = (byte) ((e2_addr >> 13) & 0x08);
-  i = i | mem_ad;
-  i = i >> 1;
+//  i = (byte) ((e2_addr >> 13) & 0x08);
+//  i = i | mem_ad;
+//  i = i >> 1;
   digitalWrite(WP1, LOW);
-  Wire.beginTransmission(i);
-  Wire.write(memaddh);                
-  Wire.write(memaddl);                
-  Wire.write(data);                
+  Wire.beginTransmission(EE_ADDR);
+  Wire.write(memaddh);
+  Wire.write(memaddl);
+  Wire.write(data);
   Wire.endTransmission(true);
-  delay(10);    
+  delay(10);
   digitalWrite(WP1, HIGH);
 }  
 //--------------------------------------------------------------------------------------------------
@@ -36,14 +36,14 @@ byte eeRead(unsigned long eeAddr) {
   
   memAddL = (byte) (eeAddr & 0xff);
   memAddH = (byte) ((eeAddr >> 8) & 0xff);
-  i = (byte) ((eeAddr >> 13) & 0x08);
-  i = i | mem_ad;
-  i = i >> 1;
-  Wire.beginTransmission(i);
+//  i = (byte) ((eeAddr >> 13) & 0x08);
+//  i = i | mem_ad;
+//  i = i >> 1;
+  Wire.beginTransmission(EE_ADDR);
   Wire.write(memAddH);                
   Wire.write(memAddL);                
   Wire.endTransmission(false);    
-  Wire.requestFrom((int)i, 1, true); 
+  Wire.requestFrom(EE_ADDR, 1, true); 
   c = Wire.read();
   return c;    
 }  
@@ -61,10 +61,10 @@ void eeErase(void) {
   do {
     memAddL = (byte) (eeAddr & 0xff);
     memAddH = (byte) ((eeAddr >> 8) & 0xff);
-    i = (byte) ((eeAddr >> 13) & 0x08);
-    i = i | mem_ad;
-    i = i >> 1;
-    Wire.beginTransmission(i);
+//    i = (byte) ((eeAddr >> 13) & 0x08);
+//    i = i | mem_ad;
+//    i = i >> 1;
+    Wire.beginTransmission(EE_ADDR);
     Wire.write(memAddH);                
     Wire.write(memAddL);
     for(k=1;k<=64;k++){                
