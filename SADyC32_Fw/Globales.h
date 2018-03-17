@@ -1,28 +1,14 @@
-SimpleTimer timer;            //Asignación del timer (timer) utilizado para las transmiciones sincrónicas
+#include <SimpleTimer.h>      //Biblioteca para setear tareas controladas por timer
 
-#define EE_ADDR 0x51          //Dirección de base de la memoria EEProm-I2C: 24AA1025     
-#define WP1 30                //Salida que maneja el WRITE PROTECT protect de la memoria EEprom-I2C: 24AA1025
-#define MEM_FIN 30000         //Fin de la EEProm (se reservan los 88 bytes del final)
+//globals.h
+#ifndef _GLOBALS_H
+#define _GLOBALS_H
 
-#define WP 32                 //Salida que maneja el WRITE PROTECT de la memoria EEprom-SPI: S25FL127S
-#define HOLD 33               //Salida que maneja el HOLD de la memoria EEprom-SPI: S25FL127S 
-#define CS1 31                //Salida que maneja el CHIP SELECT de la memoria EEprom-SPI: S25FL127S
-
-#define CS2 47                //Salida que maneja el CHIP SELECT de la memoria SD (placa nueva --> 34 ; Mikroe --> 47)
-#define WP_SD 35              //Entrada para detectar el Write Protect de la memoria SD
-#define CD 44                 //Entrada para detectar presencia del CHIP SD
-
-#define RS485_DIR 43          //Salida que maneja la direccón de la comunicación RS232
-#define RS485_Rx LOW          //Valor para que el RS485-tranceiver este en recepción
-#define RS485_Tx HIGH         //Valor para que el RS485-tranceiver este en transmición
-
-#define ESCAPE 0x1b           //Escape --> 0x1B - Definido "99" solo para pruebas en consola que no admiten "0x1B"
-#define IN_END 0x0d           //Fin de mensajes
-#define TIME_OUT 250000       //Time-out de recepción
-#define VECT_END 20           //Tamaño vector de buffer de recepcion 
-#define LARGO_ARCH 16         //Máximo largo de archivo
-
-//**********************************************************
+#if defined MAIN
+#define EXTERN
+#else
+#define EXTERN extern
+#endif
 
 #define proyecto "PROYECTO:   SADyC32"
 #define equipo   "EQUIPO:     ACQ-II"
@@ -57,56 +43,58 @@ SimpleTimer timer;            //Asignación del timer (timer) utilizado para las
 #define DIG40 40              //Pin para setear ganancia inAmp (Bit bajo)
 #define DIG41 41              //Pin para setear ganancia inAmp (Bit alto)
 
+#define TIME_OUT 250000       //Time-out de recepción
+#define VECT_END 20           //Tamaño vector de buffer de recepcion 
+#define IN_END 0x0d           //Fin de mensajes
+#define ESCAPE 0x1b           //Escape --> 0x1B - Definido "99" solo para pruebas en consola que no admiten "0x1B"
 
-#define MAX_RESOL 12           //Máxima resolución del conversor
+#define EE_ADDR 0x51          //Dirección de base de la memoria EEProm-I2C: 24AA1025     
+#define WP1 30                //Salida que maneja el WRITE PROTECT protect de la memoria EEprom-I2C: 24AA1025
+#define MEM_FIN 30000         //Fin de la EEProm (se reservan los 88 bytes del final)
 
-//--------------------------------------------------------------------------------------------------
-//Seteo del bus SPI para manejo de la memoria SD/MMC
-SPISettings Spi_mem_param(50000000, MSBFIRST, SPI_MODE0); 
-
-//--------------------------------------------------------------------------------------------------
-//volatile => estan en RAM y no en registros. Muy importante en interrupciones.
+#define WP 32                 //Salida que maneja el WRITE PROTECT de la memoria EEprom-SPI: S25FL127S
+#define HOLD 33               //Salida que maneja el HOLD de la memoria EEprom-SPI: S25FL127S 
+#define CS1 31                //Salida que maneja el CHIP SELECT de la memoria EEprom-SPI: S25FL127S
 
 enum SerialActivo {
     NO_SERIAL,
     SERIAL_0,
-    SERIAL_1,   
+    SERIAL_1,  
     SERIAL_2,
     SERIAL_3
 };
 
-SerialActivo serialActivo;
+EXTERN SimpleTimer timer;            //Asignación del timer (timer) utilizado para las transmiciones sincrónicas
 
-boolean estadoEspera = false;
+EXTERN SerialActivo serialActivo;
+EXTERN unsigned long comm0_out;           // Contador descendente para controlar el fin de recepción de comandos.
+EXTERN boolean estadoEspera;              // Determina si la máquina de estados está en modo espera o en modo de recepción de comandos
+EXTERN byte k_g;
+EXTERN int comando;
+EXTERN byte auxbuffer[VECT_END];
+EXTERN String inString;
 
-bool mem_full;                  //Indicador de memoria EEProm llena
-//------
-volatile byte modo;
-//volatile byte regFlag;
-byte auxbuffer[VECT_END];
-byte k_g = 0;
-volatile byte pin1, pin2;
-//------
-int comando;
-int idTransmTemp;
-int idRegistroTemp;
-int idTransmTempWifi;
-int vectCanales1[8];
-int vectCanales2[4];
-volatile byte cantCanAnalog1;
-volatile byte cantCanAnalog2;
-volatile unsigned int tiempo_reg;
-//------
-unsigned long comm0_out;
-volatile unsigned long pumem;
-//------
-String inString = "";
-String wifiBuffer = "";
-int wifiSendTimeout = 0;    
-//------
-String archivo;
-char nombreAP[16];
-char claveAP[16];
+EXTERN volatile byte modo;
+EXTERN volatile byte cantCanAnalog1;
+EXTERN volatile byte cantCanAnalog2;
 
-//--------------------------------------------------------------------------------------------------      
+EXTERN char nombreAP[16];
+EXTERN char claveAP[16];
+
+EXTERN volatile byte pin1, pin2;
+
+EXTERN int vectCanales1[8];
+EXTERN int vectCanales2[4];
+
+EXTERN int idTransmTemp;
+EXTERN int idRegistroTemp;
+EXTERN int idTransmTempWifi;
+
+EXTERN volatile unsigned long pumem;
+EXTERN bool mem_full;                  //Indicador de memoria EEProm llena
+
+EXTERN String wifiBuffer;
+EXTERN int wifiSendTimeout;
+
+#endif // _GLOBALS_H
 
