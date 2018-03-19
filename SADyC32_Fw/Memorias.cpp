@@ -16,16 +16,13 @@ void eeWrite(unsigned long e2_addr, byte data) {
   
   memaddl = (byte) (e2_addr & 0xff);
   memaddh = (byte) ((e2_addr >> 8) & 0xff);
-//  i = (byte) ((e2_addr >> 13) & 0x08);
-//  i = i | mem_ad;
-//  i = i >> 1;
   digitalWrite(WP1, LOW);
   Wire.beginTransmission(EE_ADDR);
   Wire.write(memaddh);
   Wire.write(memaddl);
   Wire.write(data);
   Wire.endTransmission(true);
-  delay(10);
+  for (unsigned long i=0; i<10000000; i++);   // Se cambió el delay por esta línea por problemas con DueTimer.h
   digitalWrite(WP1, HIGH);
 }  
 

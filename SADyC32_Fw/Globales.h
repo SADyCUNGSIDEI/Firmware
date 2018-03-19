@@ -1,4 +1,4 @@
-#include <SimpleTimer.h>      //Biblioteca para setear tareas controladas por timer
+#include <Arduino.h>
 
 //globals.h
 #ifndef _GLOBALS_H
@@ -43,10 +43,13 @@
 #define DIG40 40              //Pin para setear ganancia inAmp (Bit bajo)
 #define DIG41 41              //Pin para setear ganancia inAmp (Bit alto)
 
-#define TIME_OUT 250000       //Time-out de recepción
+#define MAX_RESOL 12          //Máxima resolución del conversor
+
+#define TIME_OUT 500000       //Time-out de recepción
 #define VECT_END 20           //Tamaño vector de buffer de recepcion 
 #define IN_END 0x0d           //Fin de mensajes
 #define ESCAPE 0x1b           //Escape --> 0x1B - Definido "99" solo para pruebas en consola que no admiten "0x1B"
+#define LARGO_ARCH 16         //Máximo largo de archivo
 
 #define EE_ADDR 0x51          //Dirección de base de la memoria EEProm-I2C: 24AA1025     
 #define WP1 30                //Salida que maneja el WRITE PROTECT protect de la memoria EEprom-I2C: 24AA1025
@@ -56,6 +59,16 @@
 #define HOLD 33               //Salida que maneja el HOLD de la memoria EEprom-SPI: S25FL127S 
 #define CS1 31                //Salida que maneja el CHIP SELECT de la memoria EEprom-SPI: S25FL127S
 
+#define CS2 47                //Salida que maneja el CHIP SELECT de la memoria SD (placa nueva --> 34 ; Mikroe --> 47)
+#define WP_SD 35              //Entrada para detectar el Write Protect de la memoria SD
+#define CD 44                 //Entrada para detectar presencia del CHIP SD
+
+#define delta_B_S0 115200     //Ancho de banda del Monitor/Arduino en baudios (bits/seg)- Velocidad mayor comprobada: 460.800
+#define delta_B_S1 460800     //Ancho de banda del RS232 en baudios (bits/seg)- Velocidad mayor comprobada: ????
+#define delta_B_S2 19200      //Ancho de banda del RS485 en baudios (bits/seg)- Velocidad mayor comprobada: ????
+#define delta_B_WiFi 115200   //Ancho de banda del WiFi en baudios (bits/seg)- Velocidad mayor comprobada: ????
+#define delta_B_USB 2000000   //Ancho de banda del USB Nativo (Arduino) en baudios (bits/seg)
+
 enum SerialActivo {
     NO_SERIAL,
     SERIAL_0,
@@ -64,9 +77,8 @@ enum SerialActivo {
     SERIAL_3
 };
 
-EXTERN SimpleTimer timer;            //Asignación del timer (timer) utilizado para las transmiciones sincrónicas
-
 EXTERN SerialActivo serialActivo;
+
 EXTERN unsigned long comm0_out;           // Contador descendente para controlar el fin de recepción de comandos.
 EXTERN boolean estadoEspera;              // Determina si la máquina de estados está en modo espera o en modo de recepción de comandos
 EXTERN byte k_g;
@@ -75,20 +87,24 @@ EXTERN byte auxbuffer[VECT_END];
 EXTERN String inString;
 
 EXTERN volatile byte modo;
-EXTERN volatile byte cantCanAnalog1;
-EXTERN volatile byte cantCanAnalog2;
+EXTERN volatile byte cantCanAnalog1;			//Cantidad de canales analógicos de automatización
+EXTERN volatile byte cantCanAnalog2;			//Cantidad de canales analógicos de instrumentación
 
 EXTERN char nombreAP[16];
 EXTERN char claveAP[16];
 
 EXTERN volatile byte pin1, pin2;
 
-EXTERN int vectCanales1[8];
-EXTERN int vectCanales2[4];
+EXTERN String archivo;
 
-EXTERN int idTransmTemp;
-EXTERN int idRegistroTemp;
-EXTERN int idTransmTempWifi;
+EXTERN byte vectCanales1[8];
+EXTERN byte vectCanales2[4];
+
+EXTERN unsigned int mask_Can1;         //Valor para asignar y controlar los canales en el ADC
+EXTERN unsigned int mask_Can2;         //Valor para asignar y controlar los canales en el ADC (in-Amp)
+
+EXTERN unsigned long t_Muestro_Min;    //Tiempo de muestreo mínimo
+EXTERN unsigned long delta_B;					 //Variable que carga la velocidad de acuerdo a la comunicación utilizada
 
 EXTERN volatile unsigned long pumem;
 EXTERN bool mem_full;                  //Indicador de memoria EEProm llena

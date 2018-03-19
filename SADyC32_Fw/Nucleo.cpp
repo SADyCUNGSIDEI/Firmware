@@ -1,7 +1,11 @@
+#include <SD.h>               //Biblioteca para manejo de la memoria SD/MMC
+#include <SerialFlash.h>      //Biblioteca para manejo de la memoria Flash
+#include <DueTimer.h>              //Biblioteca para setear tareas controladas por timer 
 #include "Arduino.h"
 #include "Globales.h"
 #include "Comunicacion.h"
 #include "Reloj.h"
+#include "Wifi.h"
 
 //Impresión de los datos básicos del equipo
 void datosEquipo(void) {
@@ -9,28 +13,6 @@ void datosEquipo(void) {
   serialOutput(F(equipo), true);
   serialOutput(F(vers), true);
   serialOutput(F(fecha), true);
-}
-
-void saludo(void) {
-  for (int i=1;i<=4;i++){
-    digitalWrite(TST,HIGH);
-    delay(250);
-    digitalWrite(TST,LOW);
-    delay(250);
-  }
-  datosEquipo();
- serialOutput("Modo: ", false);
- serialOutput(String(modo), true);
- serialOutput("Cantidad canales analogicos: ", false);
- serialOutput(String(cantCanAnalog1), true);
- serialOutput("Cantidad canales analogicos inAmp: ", false);
- serialOutput(String(cantCanAnalog2), true);
- // serialOutput("Pumem: ", false);
- // serialOutput(String(pumem), true);
- // serialOutput("Código de inicio: ", false);
- // serialOutput(String(getCodigoInicio()), true);
- // serialOutput("RegFlag: ", false);
- // serialOutput(String(getRegFlag()), true);
 }
 
 void setModo(byte mode) {
@@ -117,6 +99,28 @@ unsigned long getPumem(void) {
   return pumem;
 }
 
+void saludo(void) {
+  for (int i=1;i<=4;i++){
+    digitalWrite(TST,HIGH);
+    delay(250);
+    digitalWrite(TST,LOW);
+    delay(250);
+  }
+  datosEquipo();
+ serialOutput("Modo: ", false);
+ serialOutput(String(modo), true);
+ serialOutput("Cantidad canales analogicos: ", false);
+ serialOutput(String(cantCanAnalog1), true);
+ serialOutput("Cantidad canales analogicos inAmp: ", false);
+ serialOutput(String(cantCanAnalog2), true);
+ serialOutput("Pumem: ", false);
+ serialOutput(String(pumem), true);
+ serialOutput("Código de inicio: ", false);
+ serialOutput(String(getCodigoInicio()), true);
+ serialOutput("RegFlag: ", false);
+ serialOutput(String(getRegFlag()), true);
+}
+
 //Permite setear un PWM en el pin seleccionado ((pinPwm) de 10 a 13) con el Duty-Cicle (dtyCicle)
 void setPwm(byte pin, int dtyCicle) {
   if(pin > 9 && pin < 14) {               //No se usa el pin13 (led) ni los pines 0 y 1 (Rx0 y Tx0).
@@ -184,16 +188,60 @@ byte leerCanalesDigitales(void) {
 
 //Para todos los modos de trabajo, timers y desacopla interrupciones
 void parada(void) {
-//   timer.disable(idTransmTemp);
-//   timer.deleteTimer(idTransmTemp);
-//   timer.disable(idRegistroTemp);
-//   timer.deleteTimer(idRegistroTemp);
-//   timer.disable(idTransmTempWifi);
-//   timer.deleteTimer(idTransmTempWifi);
+  Timer3.stop();
+  Timer3.detachInterrupt();
+  Timer4.stop();
+  Timer4.detachInterrupt();
+  Timer5.stop();
+  Timer5.detachInterrupt();
   detachInterrupt(digitalPinToInterrupt(pin1)); 
   detachInterrupt(digitalPinToInterrupt(pin2));
   setRegFlag(0);
 }
+
+//Inicialización de todas las variables para una correcta ejecución del programa
+void iniVar(void) {
+  setCodigoInicio(0x00);                              //Guarda en reloj código de inicio
+  pumem = getPumem();
+  modo = getModo();
+  cantCanAnalog1 = getCanAnalog1();
+  cantCanAnalog2 = getCanAnalog2();
+  getWifiParams();
+
+  SerialActivo serialActivo = NO_SERIAL;
+
+  inString = "";
+
+  archivo.reserve(LARGO_ARCH);
+
+  /*if (getRegFlag() == 1) {
+    grabaIniE2();                                             //Almacena en EEProm encabezado por vuelta de alimentación
+    idRegistroTemp = timer.setInterval(getTiempoReg() * 1000, RegistroTempE2);
+  }*/
+  // Inicialización de la tarjeta SD
+  if (!SD.begin(CS2)) {
+    Serial.println(F("Tarjeta SD no presente, sin formato  o fallada"));
+//    return;
+  } else {
+    Serial.println(F("card initialized."));
+  }
+
+  // Inicialización de la memoria flash (SPI)
+  if (!SerialFlash.begin(CS1)) { 
+    Serial.println(F("No se puede acceder a la memoria Flash por SPI")); 
+  } else {
+    Serial.println(F("Flash encontrada e inicializada."));
+  }
+
+  // Inicialización del Wi-Fi
+  if (iniWifi()) {
+    Serial.println("WiFi ESP8266 inicializada");
+  } else {
+    Serial.println("Wifi ESP8266 no encontrada");
+  }
+  saludo();
+}
+
 
 // Función para vaciar el auxbuffer
 void vaciarAuxBuffer() {

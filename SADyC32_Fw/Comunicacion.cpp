@@ -96,7 +96,7 @@ void parsing(int comando) {
     break;
     case 'F':                               //Borrado EEProm - ( ESC F CR )
         if(modo == 1) {
-         borrarE2();
+          borrarE2();
         }
     break;
     case 'H':                               //Seteo del reloj de tiempo real por I2c - ( ESC H hhmmssDDMMAAAA CR )
@@ -161,7 +161,9 @@ void parsing(int comando) {
       transmisionTemporizada(tiempo, false);
     break;
     case 'W':                               //Seteo de Red y Password para WiFi - (ESC W Red 0xFF Pass 0xFF CR) - Red y Pass máximo 15 caracteres ASCII
+      Serial.println(inString);
       configWiFiParams();
+    break;
     case 'd':                               //Descarga de datos desde la EEProm - ( ESC d CR )
       parada();
       descargaE2();

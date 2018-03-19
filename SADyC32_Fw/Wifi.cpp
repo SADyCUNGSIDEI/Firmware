@@ -79,7 +79,7 @@ void checkEnvioWiFi(void) {
 
 //Graba el nombre de Red y su Password en la ram del reloj
 void configWiFiParams(void) {
-  int i=0,j=0;
+  int i = 0, j = 0;
   
   while (inString[i] != 0xff) {
     rtcWrite(RTC_M_AP+i,inString[i]);
@@ -97,28 +97,22 @@ void configWiFiParams(void) {
 }
 
 void transmTempWifi(void) {
-  byte i, aux;
-  int vectAux1[8];
-  int vectAux2[4];
+  byte aux;
+  Serial.println(cantCanAnalog1);
+  Serial3.println("AT+CIPSEND=0,2");
+  for (unsigned long i=0; i<100000000; i++);   // Se cambió el delay por esta línea por problemas con DueTimer.h
 
-  //Copia el vector de datos de los canales analógicos en un vector auxiliar para su manipulación
-  memcpy(vectAux1, vectCanales1, sizeof vectCanales1);
-  memcpy(vectAux2, vectCanales2, sizeof vectCanales2);
-
-  Serial3.println("AT+CIPSEND=0,4");
-  delay(5);
-  Serial3.write(leerCanalesDigitales());
   if ((modo == 1) || (modo == 2)) {
-    for (i = 0; i < cantCanAnalog1; i++) {
-      aux = byte(vectAux1[i] >> 8);
+    for (byte i = 0; i < cantCanAnalog1; i++) {
+      aux = byte(vectCanales1[i] >> 8);
       Serial3.write(aux);
-      Serial3.write(vectAux1[i]);
+      Serial3.write(vectCanales1[i]);
     }
   }
-  if ((modo == 3) || (modo == 4)) {
-    for(i = 0; i < cantCanAnalog1; i++){
-      Serial.write(byte(vectAux1[i] >> 8));
-      Serial.write(vectAux1[i]);
-    }
-  }
+  // if ((modo == 3) || (modo == 4)) {
+  //   for (i = 0; i < cantCanAnalog1; i++){
+  //     Serial.write(byte(vectAux1[i] >> 8));
+  //     Serial.write(vectAux1[i]);
+  //   }
+  // }
 }

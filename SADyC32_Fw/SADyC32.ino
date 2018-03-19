@@ -6,9 +6,11 @@
 #include "Nucleo.h"
 #include "Comunicacion.h"
 #include "Interrupciones.h"
+#include "Adquisicion.h"
 
 void setup() {
-  Serial.begin(115200);                 //Para comunicación serial (TX0, RX0) vía conector USB
+  Serial.begin(delta_B_S0);                 //Para comunicación serial (TX0, RX0) vía conector USB
+  Serial3.begin(delta_B_WiFi);                //Para comunicación por WiFi (TX3, RX3) (ESP8266)
 
   Wire.begin();  
 
@@ -16,16 +18,38 @@ void setup() {
 
   digitalWrite(TST, LOW);
 
+  pinMode(CS1, OUTPUT);
+  digitalWrite(CS1, HIGH);
+  pinMode(HOLD, OUTPUT);
+  digitalWrite(HOLD, HIGH);
+  pinMode(WP, OUTPUT);
+  digitalWrite(WP, HIGH);
+
+  pinMode(CS2, OUTPUT);
+  digitalWrite(CS2, HIGH);
+  pinMode(WP_SD, INPUT);
+  pinMode(CD, INPUT);
+
   estadoEspera = false;
   k_g = 0;
   inString = "";
   wifiBuffer = "";
   wifiSendTimeout = 0;
+
+  analogReference(AR_DEFAULT);                            //VER COMO SE SETEA LA REFERENCIA EXTERNA !!!!!!!
+  REG_ADC_MR = (REG_ADC_MR & 0xFFF0FFFF) | 0x00020000;    //Para convertir en 6uS aprox. en vez de 40uS.
+  REG_ADC_MR |= 0xC0;                                     //Modo: free running (página 1333 del manual del Sam3X) 
+  mask_Can1 = 0x00FF;                                     //Default
+  mask_Can2 = 0x3C00;                                     //Default
+  analogReadResolution(MAX_RESOL);
+  analogWriteResolution(MAX_RESOL);
+
+  iniVar();
+  setADCChan();                                         //Seteo en el ADC de los canales elegidos. Solo barre esos.
+  REG_ADC_CR=0x02;                                        //Comienzo de la conversión 
 }
 
 void loop() {
-  timer.run();
-
   if (comm0_out != 0) {
     digitalWrite(TST, HIGH);
     comm0_out--;
