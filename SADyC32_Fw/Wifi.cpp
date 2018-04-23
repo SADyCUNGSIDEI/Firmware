@@ -1,12 +1,10 @@
 #include "Globales.h"
-#include "Nucleo.h"
-#include "Reloj.h"
 #include "Wifi.h"
 
 bool espSend(String comando, int tiempo) {
   bool respuesta;
   Serial3.println(comando);
-  delay(tiempo);
+  delayMicroseconds(tiempo * 1000);
   respuesta = Serial3.find("OK");
   return respuesta;
 }
@@ -75,44 +73,4 @@ void checkEnvioWiFi(void) {
     }
     wifiSendTimeout--;
   }
-}
-
-//Graba el nombre de Red y su Password en la ram del reloj
-void configWiFiParams(void) {
-  int i = 0, j = 0;
-  
-  while (inString[i] != 0xff) {
-    rtcWrite(RTC_M_AP+i,inString[i]);
-    i++;
-  }
-  rtcWrite(RTC_M_AP+i,NULL);
-  
-  i++;
-  while (inString[i] != 0xff) {
-    rtcWrite(RTC_M_PW+j,inString[i]);
-    i++;
-    j++;
-  }
-  rtcWrite(RTC_M_PW+j,NULL);
-}
-
-void transmTempWifi(void) {
-  byte aux;
-  Serial.println(cantCanAnalog1);
-  Serial3.println("AT+CIPSEND=0,2");
-  for (unsigned long i=0; i<100000000; i++);   // Se cambió el delay por esta línea por problemas con DueTimer.h
-
-  if ((modo == 1) || (modo == 2)) {
-    for (byte i = 0; i < cantCanAnalog1; i++) {
-      aux = byte(vectCanales1[i] >> 8);
-      Serial3.write(aux);
-      Serial3.write(vectCanales1[i]);
-    }
-  }
-  // if ((modo == 3) || (modo == 4)) {
-  //   for (i = 0; i < cantCanAnalog1; i++){
-  //     Serial.write(byte(vectAux1[i] >> 8));
-  //     Serial.write(vectAux1[i]);
-  //   }
-  // }
 }

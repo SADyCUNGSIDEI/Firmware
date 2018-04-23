@@ -12,9 +12,6 @@ byte bcd2bin(byte bcd) {
   return (bcd / 16 * 10) + (bcd % 16);
 }
 
-//Seteo del reloj
-//Si no se puede retorna "false" sino "true"
-//Formato de entrada -->  hhmmssDDMMAAAA
 boolean setFechaHora(byte horas, byte minutos, byte segundos, byte dia, byte mes, byte anio) {
   Wire.beginTransmission(RTC_ADDR);
 
@@ -31,11 +28,10 @@ boolean setFechaHora(byte horas, byte minutos, byte segundos, byte dia, byte mes
   if (Wire.endTransmission() != 0)
     return false;
  
-  // Retornar verdadero si se escribio con exito
+  // Retornar verdadero si se escribio con éxito
   return true;
 }
 
-//Transmite por RS232 dìa y hora actual
 String getFechaHora(void) {
   byte segundo, minuto, hora, wday, dia, mes, anio;
 
@@ -62,7 +58,6 @@ String getFechaHora(void) {
           String(dia) + "/" + String(mes) + "/20" + String(anio);
 }
 
-//Transmite por RS232 dìa y hora actual
 boolean getFechaHoraReg(void) {
   byte segundo, minuto, hora, wday, dia, mes, anio;
 
@@ -102,9 +97,6 @@ boolean getFechaHoraReg(void) {
   auxbuffer[14] = anio - int(anio/10)*10;
 }
 
-//Escribe un dato en el RTC 
-//rtc_addr --> dirección interna de los registros y memoria del RTC
-//data --> dato a guardar
 void rtcWrite(byte addr, byte data) {
   Wire.beginTransmission(RTC_ADDR);
   Wire.write(addr);                

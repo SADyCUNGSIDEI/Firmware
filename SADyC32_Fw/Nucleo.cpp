@@ -6,8 +6,10 @@
 #include "Comunicacion.h"
 #include "Reloj.h"
 #include "Wifi.h"
+#include "Memorias.h"
+#include "Adquisicion.h"
+#include "Interrupciones.h"
 
-//Impresión de los datos básicos del equipo
 void datosEquipo(void) {
   serialOutput(F(proyecto), true);
   serialOutput(F(equipo), true);
@@ -16,18 +18,17 @@ void datosEquipo(void) {
 }
 
 void setModo(byte mode) {
-  if (mode < 1 || mode > 5) { mode = 1; }
+  if (mode < 1 || mode > 4) { mode = 1; }
   modo = mode;
   rtcWrite(RTC_M_MODO, modo);
 }
 
 byte getModo(void) {
   modo = rtcRead(RTC_M_MODO);
-  if (modo > 5) { modo = 1; }
+  if (modo > 4) { modo = 1; }
   return modo;
 }
 
-// Setea la cantidad de canales analógicos y los guarda en la RAM del RTC
 void setCanAnalog1(byte cant) {
   if (cant < 1 || cant > 8) { cant = 1; }
   cantCanAnalog1 = cant;
@@ -39,7 +40,7 @@ byte getCanAnalog1(void) {
   if (cantCanAnalog1 > 8) { cantCanAnalog1 = 1; }
   return cantCanAnalog1;
 }
-// Setea la cantidad de canales analógicos de tipo inAmp y los guarda en la RAM del RTC
+
 void setCanAnalog2(byte cant) {
   if (cant < 1 || cant > 4) { cant = 1; }
   cantCanAnalog2 = cant;
@@ -68,6 +69,24 @@ byte getRegFlag(void) {
   return rtcRead(RTC_M_RF);
 }
 
+void setWiFiParams(void) {
+  int i = 0, j = 0;
+  
+  while (inString[i] != 0xff) {
+    rtcWrite(RTC_M_AP+i,inString[i]);
+    i++;
+  }
+  rtcWrite(RTC_M_AP+i,NULL);
+  
+  i++;
+  while (inString[i] != 0xff) {
+    rtcWrite(RTC_M_PW+j,inString[i]);
+    i++;
+    j++;
+  }
+  rtcWrite(RTC_M_PW+j,NULL);
+}
+
 void getWifiParams(void) {
   for (int i=0; i<=15; i++) {
     nombreAP[i] = rtcRead(RTC_M_AP + i);
@@ -81,7 +100,14 @@ void setTiempoReg(unsigned int tiempoReg) {
   rtcWrite(RTC_M_ST + 10, byte(tiempoReg >> 8));
 }
 
-// Setea el puntero de memoria de la EEPROM (I2C)
+//Lee el tiempo de registro y lo devuelve
+unsigned int getTiempoReg(void) {
+  unsigned int tiempoReg = 0;
+  tiempoReg = tiempoReg + (unsigned int)rtcRead(RTC_M_ST + 9);
+  tiempoReg = tiempoReg + ((unsigned int)rtcRead(RTC_M_ST + 10) << 8);
+  return tiempoReg;
+}
+
 void setPumem(unsigned long pmem) {
   pumem = pmem;
   rtcWrite(RTC_M_ST + 1, byte(pmem>>0));
@@ -90,7 +116,6 @@ void setPumem(unsigned long pmem) {
   rtcWrite(RTC_M_ST + 4, byte(pmem>>24));
 }
 
-// Lee el puntero de memoria de la EEPROM (I2C) que se encuentra grabado en la RAM del RTC
 unsigned long getPumem(void) {
   pumem = pumem + (unsigned long)rtcRead(RTC_M_ST + 1);
   pumem = pumem + ((unsigned long)rtcRead(RTC_M_ST + 2) << 8);  
@@ -121,32 +146,27 @@ void saludo(void) {
  serialOutput(String(getRegFlag()), true);
 }
 
-//Permite setear un PWM en el pin seleccionado ((pinPwm) de 10 a 13) con el Duty-Cicle (dtyCicle)
 void setPwm(byte pin, int dtyCicle) {
   if(pin > 9 && pin < 14) {               //No se usa el pin13 (led) ni los pines 0 y 1 (Rx0 y Tx0).
     analogWrite(pin, dtyCicle);
   }
 }
 
-//Setea el DAC seleccionado ((pinDac) de 00 a 01) con un valor específico (Valor)
 void setDac(byte pin, int valor) {
   if(pin > 65 && pin < 68){
     analogWrite(pin, valor);
   }
 }
 
-//Permite setear un pin de salida digital ((pinDig) de 02 a 09) con el ((estado) 0 o 1)
 void setSalDig(byte pinDig, bool estado) {
   if (pinDig > 1 && pinDig < 10) {               //No se usa el pin13 (led) ni los pines 0 y 1 (Rx0 y Tx0).
     digitalWrite(pinDig, estado);
   }
 }
 
-//Permite setear la amplificación de los inAmps. Entrada analógica ((in_inAmp) de 09 a 12)
-//con la amplificación ((amplif) 0 a 3)
-void setInAmp(byte in_inAmp, byte amplif) {
-  if((in_inAmp > 8 && in_inAmp < 13) && amplif < 4) {
-    in_inAmp = in_inAmp + 27;               
+void setInAmp(byte inInAmp, byte amplif) {
+  if((inInAmp > 8 && inInAmp < 13) && amplif < 4) {
+    inInAmp = inInAmp + 27;               
     switch(amplif){
       case 0:
         digitalWrite(40,LOW);
@@ -165,13 +185,12 @@ void setInAmp(byte in_inAmp, byte amplif) {
         digitalWrite(41,HIGH);
       break;
     }
-    digitalWrite(in_inAmp,LOW);
+    digitalWrite(inInAmp,LOW);
     delayMicroseconds(1);    
-    digitalWrite(in_inAmp,HIGH);
+    digitalWrite(inInAmp,HIGH);
   }
 }
 
-//Rutina que lee los canales digitales de entrada y los unifica en un solo byte "digi_in"
 byte leerCanalesDigitales(void) {
   byte digi_in;
   
@@ -186,7 +205,6 @@ byte leerCanalesDigitales(void) {
   return digi_in;
 }
 
-//Para todos los modos de trabajo, timers y desacopla interrupciones
 void parada(void) {
   Timer3.stop();
   Timer3.detachInterrupt();
@@ -199,7 +217,6 @@ void parada(void) {
   setRegFlag(0);
 }
 
-//Inicialización de todas las variables para una correcta ejecución del programa
 void iniVar(void) {
   setCodigoInicio(0x00);                              //Guarda en reloj código de inicio
   pumem = getPumem();
@@ -242,10 +259,140 @@ void iniVar(void) {
   saludo();
 }
 
-
-// Función para vaciar el auxbuffer
 void vaciarAuxBuffer() {
   for (int i = 1; i < (int)sizeof(auxbuffer); i++) {
     auxbuffer[i] = 0;
+  }
+}
+
+void ejecucion(int comando) {
+  int tiempo;
+  unsigned long aux;
+
+  switch (comando) {
+    case '1':                               //Test de los chips de EEProm instalados -( ESC 1 Valor CR ) - Valor => 0 a 255
+      byte data;
+      
+      data = parseValor(1,3);
+      eeTest(data);
+    break;
+    case '2':                               //Test de la comunicación RS232 - ( ESC 2 Char CR ) - Char => cialquier caracter ASCII
+      serialOutput(inString, true);
+    break;
+    case 'A':                               //Recibe cantidad de canales analógicos - ( ESC A Cantidad CR) - Cantidad => 1 a 8
+      aux = inString.toInt();
+      setCanAnalog1(aux);
+    break;
+    case 'B':                               //Recibe cantidad de canales analógicos tipo inAmp - ( ESC B Cantidad CR) - Cantidad => 1 a 4
+      aux = inString.toInt();
+      setCanAnalog2(aux);
+    break;
+    case 'C':                               //Seteo de la amplificación de los inAmp - (ESC C Entrada Amplificación CR) - Entrada => 09 a 12 - Amplificación => 0 a 3
+      byte in_inAmp, amplif;
+
+      in_inAmp = parseValor(1,2);
+      amplif = parseValor(3,1);
+
+      setInAmp(in_inAmp, amplif);
+    break;
+    case 'D':                               //Medición de tiempo entre eventos - ( ESC D Pin1 Pin2 CR ) - Pin1 y Pin2 => patas válidas, puede ser la misma
+        pin1 = parseValor(1, 2);            //Patas válidas:  46, 47, 49, 50, 51, 52, 53
+        pin2 = parseValor(3, 2);
+
+        setMedicion(pin1, pin2);
+    break;
+    case 'E':                               //Recibe el modo de trabajo del equipo - ( ESC E Modo CR ) - Modo => 1 a 5
+        aux = inString.toInt();
+        setModo(aux);
+    break;
+    case 'F':                               //Borrado EEProm - ( ESC F CR )
+        if(modo == 1) {
+          borrarE2();
+        }
+    break;
+    case 'H':                               //Seteo del reloj de tiempo real por I2c - ( ESC H hhmmssDDMMAAAA CR )
+      byte hora;
+      byte minuto;
+      byte segundo;
+      byte dia;
+      byte mes;
+      int anio;
+
+      hora = parseValor(1,2);
+      minuto = parseValor(3,2);
+      segundo = parseValor(5,2);
+      dia = parseValor(7,2);
+      mes = parseValor(9,2);
+      anio = parseValor(13,2);
+    
+      setFechaHora(hora, minuto, segundo, dia, mes, anio);
+    break;
+    case 'M':                               //Generación de PWM - ( ESC M Pin Duty CR) - Pin => 10 al 13 - Duty => 0000 a 4095
+      int pinPwm;
+      int dtyCicle;
+
+      pinPwm = parseValor(1, 2);
+      dtyCicle = parseValor(3, 4);
+
+      setPwm(pinPwm, dtyCicle);
+    break;
+    case 'N':                               //Generación de señales analógicas en DACs - ( ESC N Pin Steps CR ) - Pin => 00 al 01 - Steps => 0000 a 4095
+      int pinDac;
+      int valor;
+
+      pinDac = parseValor(1, 2);
+      valor = parseValor(3, 4);
+
+      setDac(pinDac, valor);
+    break;
+    case 'O':                               //Transmite datos de un archivo en memoria SD - ( ESC O Archivo CR ) - Archivo en formato --> 15.3 máximo
+      leerArchSD(inString);
+    break;
+    case 'P':                               //Parada de los modos del equipo - ( ESC P CR )
+      parada();
+    break;
+    case 'Q':                               //Graba un dato fijo en un archivo en memoria SD - ( ESC Q Archivo CR ) - Archivo en formato --> 15.3 máximo
+      grabarDatoSD(inString, 'a');
+    break;
+    case 'R':                               //Registro temporizado de los canales digitales y analógicos seteados - ( ESC R Tiempo CR ) - Tiempo => 1 a 3600 segundos
+      tiempo = inString.toInt();
+      transmisionTemporizada(tiempo, EEPROM);
+    break;
+    case 'S':                               //Seteo de la salida digital - (ESC S Salida Estado CR) - Salida => 02 a 09 - Estado 0 o 1
+      byte pinDig;
+      bool estado;
+
+      pinDig = parseValor(1,2);
+      estado = parseValor(3,2);
+
+      setSalDig(pinDig, estado);
+    break;
+    case 'T':                               //Transmisión temporizada de los canales digitales y analógicos seteados - ( ESC T Tiempo CR ) - Tiempo => 1 a 10000 milisegundos || Tiempo=0 -> una transmisión
+      tiempo = inString.toInt();            //(En los datos analógicos se transmite primero el byte alto y luego el bajo)
+      // transmisionTemporizada(tiempo, false);
+      transmisionTemporizada(tiempo, RS232);
+    break;
+    case 'W':                               //Seteo de Red y Password para WiFi - (ESC W Red 0xFF Pass 0xFF CR) - Red y Pass máximo 15 caracteres ASCII
+      Serial.println(inString);
+      setWiFiParams();
+    break;
+    case 'd':                               //Descarga de datos desde la EEProm - ( ESC d CR )
+      parada();
+      descargaE2();
+      setCodigoInicio(0x02);                //Guarda en reloj código de descarga
+    break;
+    case 'e':                               //Transmite datos del equipo - ( ESC e CR ) - Responde con los datos básicos del proyecto
+      datosEquipo();
+    break;
+    case 'h':                               //Transmite día y hora del RTC - ( ESC h CR ) - Responde con día y hora del equipo
+      serialOutput(getFechaHora(), true);
+    break;
+    case 'g':
+      saludo();
+    break;
+    case 'k':
+      tiempo = inString.toInt();
+      transmisionTemporizada(tiempo, WIFI);
+    break;
   }
 }

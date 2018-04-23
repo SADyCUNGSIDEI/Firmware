@@ -1,5 +1,4 @@
 #define MAIN
-#include <SimpleTimer.h>      //Biblioteca para setear tareas controladas por timer
 #include <Wire.h>             //Biblioteca para manejo del bus I2C
 
 #include "Globales.h"

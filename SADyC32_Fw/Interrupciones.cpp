@@ -4,20 +4,8 @@ volatile byte startFlag = false;
 volatile byte stopFlag = false;
 volatile unsigned long toma1, toma2;
 
-void trigSamePin(void) {
-  if ((startFlag == true) && (stopFlag == false)) {
-    toma2 = micros();
-    stopFlag = true;
-  }
-  if ((startFlag == false) && (stopFlag == false)) {
-    Serial.println("Inicio medicion");
-    toma1 = micros();
-    startFlag = true;
-  }
-}
-
 void trigPin1(void) {
-  if((startFlag == false) && (stopFlag == false)) {
+  if ((startFlag == false) && (stopFlag == false)) {
     toma1 = micros();
     startFlag = true;
   }
@@ -27,6 +15,18 @@ void trigPin2(void) {
   if((startFlag == true) && (stopFlag == false)) {
     toma2 = micros();
     stopFlag = true;
+  }
+}
+
+void trigSamePin(void) {
+  if ((startFlag == true) && (stopFlag == false)) {
+    toma2 = micros();
+    stopFlag = true;
+  }
+  if ((startFlag == false) && (stopFlag == false)) {
+    Serial.println("Inicio medicion");
+    toma1 = micros();
+    startFlag = true;
   }
 }
 
@@ -43,7 +43,7 @@ void setMedicion(byte pin1, byte pin2) {
 }
 
 void checkMedicion(void) {
-  if((startFlag == true) && (stopFlag == true)) {
+  if ((startFlag == true) && (stopFlag == true)) {
     toma2 = toma2 - toma1;
     Serial.print(F("Tiempo entre eventos: "));
     Serial.print(toma2);

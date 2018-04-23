@@ -8,27 +8,21 @@
 #include "Memorias.h"
 #include "Comunicacion.h"
 
-//Rutina que escribe un dato en la E2
-//e2addr --> dirección completa de puntero a banco de memoria en 4 bytes
-//data --> datos a guardar
-void eeWrite(unsigned long e2_addr, byte data) {
+void eeWrite(unsigned long e2Addr, byte data) {
   byte memaddl, memaddh; 
   
-  memaddl = (byte) (e2_addr & 0xff);
-  memaddh = (byte) ((e2_addr >> 8) & 0xff);
+  memaddl = (byte) (e2Addr & 0xff);
+  memaddh = (byte) ((e2Addr >> 8) & 0xff);
   digitalWrite(WP1, LOW);
   Wire.beginTransmission(EE_ADDR);
   Wire.write(memaddh);
   Wire.write(memaddl);
   Wire.write(data);
   Wire.endTransmission(true);
-  for (unsigned long i=0; i<10000000; i++);   // Se cambió el delay por esta línea por problemas con DueTimer.h
+  delayMicroseconds(10000);
   digitalWrite(WP1, HIGH);
-}  
+}
 
-//Rutina que lee un dato de la E2
-//e2addr --> dirección completa de puntero a banco de memoria en 4 bytes
-//Devuelve byte leído
 byte eeRead(unsigned long eeAddr) {
   byte memAddL, memAddH, c; 
   
@@ -46,7 +40,6 @@ byte eeRead(unsigned long eeAddr) {
   return c;    
 }
 
-//Borrado rápido de la memoria E2
 void eeErase(void) {
   byte memAddL, memAddH, data, k; 
   unsigned long eeAddr;
@@ -68,12 +61,11 @@ void eeErase(void) {
        eeAddr++;                
     }
     Wire.endTransmission(true);    
-    delay(10);
+    delayMicroseconds(10000);
   } while(eeAddr < MEM_FIN);
   digitalWrite(WP, HIGH);
 }
 
-//Testea cuantos chips de memoria EEProm hay instalados, escribiendo y lledendo en cada uno el dato ingresado por el usuario
 void eeTest(byte data) {
   unsigned long aux;
   byte i;
@@ -83,7 +75,7 @@ void eeTest(byte data) {
       eeWrite(aux, data);
       aux = aux + 65536;
     }
-    delay(10);
+    delayMicroseconds(10000);
     aux = 32000;          
     for(i=1;i<=2;i++) {
       data = eeRead(aux);
@@ -101,8 +93,6 @@ void eeTest(byte data) {
     }  
 }
 
-//Rutina que graba un datos en la EEProm y guarda el nuevo pumem en la ram del reloj
-//Data --> dato a grabar - Se asume que "pumem" apunta al primer valor libre
 void grabaDatoE2(byte data) {
   if (mem_full == 0) {
       eeWrite(pumem, data);
@@ -126,17 +116,12 @@ void descargaE2(void) {
   }
 }
 
-//Rutina que borra la EEProm e inicializa el puntero de registro "pumem" a cero
 void borrarE2(void) {
   parada();
   eeErase();
   setPumem(0);
 }
 
-//--------------------------------------------------------------------------------------------------
-//Rutina que agrega un dato en un archivo en la memoria SD
-//archivo --> nombre del archivo en donde se desea guardar el dato.
-//data --> dato a guardar
 bool grabarDatoSD(String archivo, byte data){
   String dataString = "";
 
@@ -155,11 +140,7 @@ bool grabarDatoSD(String archivo, byte data){
     return false;
   }
 }
-//--------------------------------------------------------------------------------------------------
 
-//--------------------------------------------------------------------------------------------------
-//Rutina que lee un archivo de la memoria SD y lo manda por RS232
-//archivo --> nombre del archivo en donde se desea guardar el dato.
 bool leerArchSD(String archivo){ 
   File dataFile = SD.open(archivo, FILE_READ);
 
@@ -177,9 +158,6 @@ bool leerArchSD(String archivo){
   }
 }
 
-//Rutina que agrega un dato en un archivo en la memoria Flash
-//archivo --> nombre del archivo en donde se desea guardar el dato. Si no existe lo crea.
-//data --> dato a guardar
 bool grabarDatoFlash(char *archivo, byte data){
   char buff[256];
 
@@ -200,12 +178,7 @@ bool grabarDatoFlash(char *archivo, byte data){
     return false;
   }
 }
-//--------------------------------------------------------------------------------------------------
 
-//--------------------------------------------------------------------------------------------------
-//Rutina que lee un archivo de la memoria Flash y lo manda por RS232
-//archivo --> nombre del archivo en donde se desea guardar el dato.
-//cant_datos --> cantidad de datos a leer (0 --> todos)
 bool leerArchFlash(char *archivo){
 
   if (SerialFlash.exists(archivo)) {
@@ -230,9 +203,6 @@ bool leerArchFlash(char *archivo){
   }    
 }
  
-//--------------------------------------------------------------------------------------------------
-//Rutina que borra toda la Flash
-
 void borrarFlash(void) {
 
   SerialFlash.eraseAll();

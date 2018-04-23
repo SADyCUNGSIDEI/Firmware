@@ -12,8 +12,8 @@
 
 #define proyecto "PROYECTO:   SADyC32"
 #define equipo   "EQUIPO:     ACQ-II"
-#define vers     "VERSION:    1.9.0"
-#define fecha    "DE FECHA:   07-10-2017"
+#define vers     "VERSION:    1.9.1"
+#define fecha    "DE FECHA:   22-04-2018"
 
 #define RTC_ADDR      0x68          //Dirección del RTC-I2C:  DS1307
 #define RTC_M_ST      0x08          //Dirección de comienzo ram del RTC
@@ -25,7 +25,7 @@
 #define RTC_M_AP      0x18          //Dirección: Inicio del nombre del access point (WiFi) - 16 bytes
 #define RTC_M_PW      0x28          //Dirección: Inicio del password del acces point (WiFi) - 16 bytes
 
-#define TST 13                //TST para indicar encendido de la placa SADyC32 (Pin 45)- En "13" solo para pruebas de placa Arduino sola
+#define TST 13                 //TST para indicar encendido de la placa SADyC32 (Pin 45)- En "13" solo para pruebas de placa Arduino sola
 
 #define DIN0 29                //Pin correspondiente a la entrada digital DIN0
 #define DIN1 27                //Pin correspondiente a la entrada digital DIN1
@@ -69,6 +69,7 @@
 #define delta_B_WiFi 115200   //Ancho de banda del WiFi en baudios (bits/seg)- Velocidad mayor comprobada: ????
 #define delta_B_USB 2000000   //Ancho de banda del USB Nativo (Arduino) en baudios (bits/seg)
 
+// Define el serial por dónde se recibió el comando, para devolverlo por el mismo.
 enum SerialActivo {
     NO_SERIAL,
     SERIAL_0,
@@ -78,6 +79,15 @@ enum SerialActivo {
 };
 
 EXTERN SerialActivo serialActivo;
+
+// Define adonde se enviarán los valores leidos por el ADC.
+enum SalidaAdquisicion {
+	RS232,
+	EEPROM,
+	WIFI
+};
+
+EXTERN SalidaAdquisicion salida;
 
 EXTERN unsigned long comm0_out;           // Contador descendente para controlar el fin de recepción de comandos.
 EXTERN boolean estadoEspera;              // Determina si la máquina de estados está en modo espera o en modo de recepción de comandos
@@ -113,4 +123,3 @@ EXTERN String wifiBuffer;
 EXTERN int wifiSendTimeout;
 
 #endif // _GLOBALS_H
-
